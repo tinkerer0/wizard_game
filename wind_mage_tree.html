@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>바람마법사 전직 트리</title>
+    <style>
+      :root {
+        font-family: Arial, "Malgun Gothic", sans-serif;
+        color: #122018;
+        background: #f3f8f1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 28px;
+        background: #f3f8f1;
+      }
+
+      .sheet {
+        position: relative;
+        width: 1680px;
+        height: 1760px;
+        margin: 0 auto;
+        border: 1px solid #cddfc8;
+        background: #fcfffb;
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.08);
+      }
+
+      .title {
+        position: absolute;
+        top: 34px;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: 0;
+        white-space: nowrap;
+      }
+
+      .root-label {
+        position: absolute;
+        left: 62px;
+        top: 858px;
+        font-size: 30px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .box {
+        position: absolute;
+        display: grid;
+        place-items: center;
+        border: 4px solid #122018;
+        background: #fcfffb;
+        color: #122018;
+        font-weight: 800;
+        text-align: center;
+        line-height: 1.25;
+      }
+
+      .tier1 {
+        width: 180px;
+        height: 86px;
+        padding: 8px;
+        font-size: 20px;
+      }
+
+      .tier2 {
+        width: 160px;
+        height: 48px;
+        font-size: 15px;
+      }
+
+      .tier3 {
+        width: 132px;
+        height: 28px;
+        border-width: 3px;
+        font-size: 12px;
+      }
+
+      svg {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      path {
+        fill: none;
+        stroke: #122018;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="sheet" aria-label="바람마법사 전직 트리">
+      <svg id="connectors" viewBox="0 0 1680 1760" aria-hidden="true"></svg>
+
+      <div class="root-label">바람마법사</div>
+      <div class="title" style="left: 430px;">1차바람마법사 전직</div>
+      <div class="title" style="left: 790px;">2차바람마법사 전직</div>
+      <div class="title" style="left: 1190px;">3차바람마법사 전직</div>
+    </main>
+
+    <script>
+      const sheet = document.querySelector(".sheet");
+      const svg = document.getElementById("connectors");
+
+      const root = { x: 210, y: 880 };
+      const columns = {
+        tier1: { x: 430, w: 180, h: 86 },
+        tier2: { x: 800, w: 160, h: 48 },
+        tier3: { x: 1210, w: 132, h: 28 },
+      };
+
+      const jobs = [
+        {
+          name: "질풍술사",
+          note: "빠르게 움직이며 난사",
+          y: 250,
+          tier2: ["순풍사수", "돌풍유격사", "잔영술사"],
+          tier3: [
+            ["초속사수", "편류궁수", "풍압난사자"],
+            ["돌풍기수", "회오리돌격사", "난기류추격자"],
+            ["바람잔영사", "분신기류사", "무풍잠행자"],
+          ],
+        },
+        {
+          name: "칼바람술사",
+          note: "얇고 빠른 절단 탄막",
+          y: 810,
+          tier2: ["풍검술사", "절단기류사", "폭풍낫술사"],
+          tier3: [
+            ["진공검사", "쌍풍검사", "연속절풍사"],
+            ["공명절단사", "회전칼날사", "균열풍압사"],
+            ["폭풍낫무희", "역풍참격사", "천공절단자"],
+          ],
+        },
+        {
+          name: "기류술사",
+          note: "탄환 궤도와 흐름 조작",
+          y: 1370,
+          tier2: ["궤도조율사", "상승기류사", "진공장술사"],
+          tier3: [
+            ["곡선탄도사", "나선궤도사", "회귀탄술사"],
+            ["부유장술사", "낙하풍술사", "고도지배자"],
+            ["진공포획사", "무압붕괴사", "공백영역사"],
+          ],
+        },
+      ];
+
+      function addBox(tier, x, y, label) {
+        const spec = columns[tier];
+        const el = document.createElement("div");
+        el.className = `box ${tier}`;
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        el.innerHTML = label;
+        sheet.appendChild(el);
+        return {
+          x,
+          y,
+          w: spec.w,
+          h: spec.h,
+          cx: x + spec.w / 2,
+          cy: y + spec.h / 2,
+        };
+      }
+
+      function connect(from, to) {
+        const startX = from.x + from.w;
+        const startY = from.cy;
+        const endX = to.x;
+        const endY = to.cy;
+        const midX = startX + (endX - startX) * 0.45;
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`);
+        svg.appendChild(path);
+      }
+
+      function connectRoot(to) {
+        const midX = root.x + (to.x - root.x) * 0.45;
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", `M ${root.x} ${root.y} C ${midX} ${root.y}, ${midX} ${to.cy}, ${to.x} ${to.cy}`);
+        svg.appendChild(path);
+      }
+
+      jobs.forEach((job) => {
+        const tier1 = addBox(
+          "tier1",
+          columns.tier1.x,
+          job.y,
+          `${job.name}<br><span style="font-size:13px;font-weight:700;">${job.note}</span>`
+        );
+        connectRoot(tier1);
+
+        const tier2Ys = [job.y - 120, job.y + 20, job.y + 160];
+        tier2Ys.forEach((tier2Y, tier2Index) => {
+          const tier2 = addBox("tier2", columns.tier2.x, tier2Y, job.tier2[tier2Index]);
+          connect(tier1, tier2);
+
+          const tier3Ys = [tier2Y - 42, tier2Y + 8, tier2Y + 58];
+          tier3Ys.forEach((tier3Y, tier3Index) => {
+            const tier3 = addBox("tier3", columns.tier3.x, tier3Y, job.tier3[tier2Index][tier3Index]);
+            connect(tier2, tier3);
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

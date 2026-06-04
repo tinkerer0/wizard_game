@@ -1,0 +1,7 @@
+# 실험·비교 부산물 (저장소에 안 올림)
+*_compare.html
+*_compare.svg
+
+# 로그
+server.log
+*.log
