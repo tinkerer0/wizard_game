@@ -8,7 +8,8 @@ import { startRun, updateRun, chooseJob, continueEndless, endRun } from "./game/
 import { botControl, botPickJob, clearBotKeys, runSim, botChoice } from "./game/bot.js";
 import { STAGES } from "./data/stages.js";
 import { initWorld, renderWorld, updateWorldFx } from "./render/world.js";
-import { resetVfx } from "./render/vfx.js";
+import { resetVfx, sys } from "./render/vfx.js";
+import { hex, P } from "../vendor/pixelfx/src/core/index.js";
 import { blit } from "./render/spritekit.js";
 import { drawHud, PAUSE_ITEMS } from "./render/hud.js";
 import { loadFonts, hits } from "./render/uikit.js";
@@ -32,7 +33,7 @@ let prevScene = "title";
 G.actions = {
   startRun(opts) { resetVfx(); resetCursor(); startRun(opts || {}); emit("scene", { scene: "play" }); },
   goto(scene) { if (scene === "settings") prevScene = G.scene; G.scene = scene; resetCursor(); emit("scene", { scene }); },
-  back() { if (prevScene === "play" && G.s && G.s.mode === "paused") { G.scene = "play"; } else G.actions.goto("title"); },
+  back() { resetCursor(); if (prevScene === "play" && G.s && G.s.mode === "paused") { G.scene = "play"; } else G.actions.goto("title"); },
   chooseJob(i) { chooseJob(i); },
   continueEndless() { resetCursor(); continueEndless(); emit("scene", { scene: "play" }); },
   pauseSelect(i) {
@@ -43,7 +44,10 @@ G.actions = {
     sfx("uiSelect");
   },
   sfx: (n) => sfx(n),
+  pause() { if (G.s && (G.s.mode === "playing" || G.s.mode === "intermission")) pause(); },
   blit,
+  hex,
+  ember(x, y, c) { sys.ps.spawn(P.EMBER, x, y, (Math.random() - 0.5) * 16, -20 - Math.random() * 20, 1.2 + Math.random(), hex(c), 1 + Math.random()); },
   applySettings() { save(); if (audio) audio.setVolumes({ sfx: G.settings.sfx, music: G.settings.music }); },
 };
 function sfx(n) { if (audio && audio.sfx) audio.sfx(n); }
@@ -51,6 +55,7 @@ function sfx(n) { if (audio && audio.sfx) audio.sfx(n); }
 // ---------- 게임 사건 → 안내 문구 ----------
 on("waveStart", (d) => {
   const s = G.s;
+  if (d.stageChanged && d.gw > 1) s.fadeIn = 0.7;
   if (d.isBoss) return;
   const st = STAGES[d.stageIndex];
   if (d.stageChanged && !s.endless) s.banner = { text: st.name, sub: `${st.sub} — 웨이브 10개를 버티고 보스를 쓰러뜨려라`, t: 0, max: 2.6, color: "gold" };
@@ -58,7 +63,7 @@ on("waveStart", (d) => {
 });
 on("bossSpawn", (d) => { G.s.banner = { boss: true, text: d.boss.name, sub: d.boss.title, t: 0, max: 2.6 }; });
 on("bossPhase", () => { G.s.banner = { text: "분노!", sub: "보스의 공격이 거세진다", t: 0, max: 1.6, color: "red", small: true }; });
-on("runEnd", () => resetVfx());
+on("runEnd", () => { resetVfx(); resetCursor(); });
 on("waveClear", () => { if (!G.s.banner) G.s.banner = { text: "웨이브 클리어", sub: "", t: 0, max: 1.4, small: true, color: "gold" }; });
 
 // ---------- 입력 ----------
@@ -97,6 +102,7 @@ function onKey(code, repeat) {
     if ((code === "Escape" || code === "KeyP") && (s.mode === "playing" || s.mode === "intermission" || s.mode === "stageclear")) { pause(); sfx("uiBack"); }
     return;
   }
+  if (repeat && (code === "Enter" || code === "Space" || code === "NumpadEnter" || code === "Escape" || code === "Backspace")) return;
   const sc = SCENES[G.scene];
   if (sc) sc.key(code);
 }
@@ -171,7 +177,7 @@ function draw() {
   if (G.scene === "play" || (G.scene === "settings" && G.s && G.s.mode === "paused")) {
     renderWorld(ctx);
     drawHud(ctx);
-    if (G.scene === "settings") SCENES.settings.draw(ctx);
+    if (G.scene === "settings") { hits.list.length = 0; SCENES.settings.draw(ctx); }
     return;
   }
   if (G.scene === "results") {

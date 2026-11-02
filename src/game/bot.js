@@ -88,28 +88,30 @@ export function botControl() {
 
 /** 화면 없이 한 판 돌리기. opts: { j1, j2, j3, maxWave, maxSteps, startWave } */
 export function runSim(opts = {}) {
-  const prevMuted = bus.muted, prevScene = G.scene, prevS = G.s, prevBot = G.bot;
+  const prev = { muted: bus.muted, scene: G.scene, s: G.s, bot: G.bot, keys: new Set(G.keys), choice: { ...botChoice } };
   bus.muted = true;
   G.sim = true;
-  botChoice.j1 = opts.j1 || 0; botChoice.j2 = opts.j2 || 0; botChoice.j3 = opts.j3 || 0;
-  startRun({ startWave: opts.startWave || 1, upgrades: opts.upgrades || {} });
-  G.bot = true;
-  const dt = 1 / 60, maxSteps = opts.maxSteps || 60 * 60 * 40, maxWave = opts.maxWave || 30;
-  let steps = 0;
-  const log = [];
-  let lastGw = 0;
-  while (steps < maxSteps && G.scene === "play" && G.s.gw <= maxWave) {
+  try {
+    botChoice.j1 = opts.j1 || 0; botChoice.j2 = opts.j2 || 0; botChoice.j3 = opts.j3 || 0;
+    startRun({ startWave: Math.max(1, Math.floor(opts.startWave || 1)), upgrades: opts.upgrades || {} });
+    G.bot = true;
+    const dt = 1 / 60, maxSteps = opts.maxSteps || 60 * 60 * 40, maxWave = opts.maxWave || 30;
+    let steps = 0, lastGw = 0;
+    const log = [];
+    while (steps < maxSteps && G.scene === "play" && G.s.gw <= maxWave) {
+      const s = G.s;
+      if (s.mode === "jobselect") { botPickJob(); continue; }
+      botControl();
+      updateRun(dt);
+      if (s.gw !== lastGw) { log.push({ gw: s.gw, lvl: s.player.level, hp: Math.round(s.player.hp), t: Math.round(s.time) }); lastGw = s.gw; }
+      steps++;
+    }
     const s = G.s;
-    if (s.mode === "jobselect") { botPickJob(); continue; }
-    botControl();
-    updateRun(dt);
-    if (s.gw !== lastGw) { log.push({ gw: s.gw, lvl: s.player.level, hp: Math.round(s.player.hp), t: Math.round(s.time) }); lastGw = s.gw; }
-    steps++;
+    return { gw: s.gw, victory: s.victory, dead: s.mode === "dead" || s.ended === "defeat", job: s.player.job, level: s.player.level, kills: s.kills, time: Math.round(s.time), bossKills: s.bossKills, log };
+  } finally {
+    G.sim = false;
+    bus.muted = prev.muted; G.scene = prev.scene; G.s = prev.s; G.bot = prev.bot;
+    G.keys.clear(); for (const k of prev.keys) G.keys.add(k);
+    Object.assign(botChoice, prev.choice);
   }
-  const s = G.s;
-  const out = { gw: s.gw, victory: s.victory, dead: s.mode === "dead" || s.ended === "defeat", job: s.player.job, level: s.player.level, kills: s.kills, time: Math.round(s.time), bossKills: s.bossKills, log };
-  clearBotKeys();
-  G.sim = false;
-  bus.muted = prevMuted; G.scene = prevScene; G.s = prevS; G.bot = prevBot;
-  return out;
 }

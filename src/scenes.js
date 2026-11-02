@@ -16,6 +16,7 @@ export function resetCursor() { ui.cursor = 0; ui.confirmReset = 0; }
 
 function menuList(ctx, items, x, y, w, opts = {}) {
   const step = opts.step || 50;
+  clampCursor(items.length);
   items.forEach((it, i) => {
     const yy = y + i * step, sel = i === ui.cursor;
     if (sel) { ctx.fillStyle = "rgba(42,31,54,0.9)"; ctx.fillRect(x - w / 2, yy - 8, w, 40); flameCursor(ctx, x - w / 2 + 16, yy, G.time); }
@@ -25,7 +26,10 @@ function menuList(ctx, items, x, y, w, opts = {}) {
   });
 }
 
+function clampCursor(n) { if (ui.cursor >= n || ui.cursor < 0) ui.cursor = 0; }
+
 function moveCursor(code, n) {
+  clampCursor(n);
   if (code === "ArrowUp" || code === "KeyW") { ui.cursor = (ui.cursor - 1 + n) % n; G.actions.sfx("uiMove"); return true; }
   if (code === "ArrowDown" || code === "KeyS") { ui.cursor = (ui.cursor + 1) % n; G.actions.sfx("uiMove"); return true; }
   return false;
@@ -38,34 +42,42 @@ const isBack = (c) => c === "Escape" || c === "Backspace";
 function titleItems() {
   return [
     { label: "시작하기", go: () => G.actions.startRun() },
-    { label: "영구 성장", go: () => G.actions.goto("upgrades"), right: `${getSave().crystals} 결정` },
+    { label: "영구 성장", go: () => G.actions.goto("upgrades") },
     { label: "도감 · 기록", go: () => G.actions.goto("codex") },
     { label: "설정", go: () => G.actions.goto("settings") },
   ];
 }
 
+const TITLE_LOOKS = ["crimsonBlade", "hellBombardier", "phoenixTamer"];
+
 export const title = {
-  /** 픽셀 화면(480×300) 위에 그릴 것: 가운데 마법사 */
+  /** 픽셀 화면(480×300) 위: 마법사 자리의 불빛과 떠오르는 불티 */
   world(p, f) {
-    const spr = wizardSprites({ color: FIRE_TIER[0], tier: 0, branch: null, fx: computeFx("swordsman") });
-    const frame = spr.idle[Math.floor(G.time * 1.6) % 2];
-    G.actions.blit(f, frame, 240 - frame.w / 2, 182 - frame.h);
-    p.glow(240, 170, 80, 0xff2a8aff, 0.35);
+    const id = TITLE_LOOKS[Math.floor(G.time / 3.2) % TITLE_LOOKS.length];
+    const fx = computeFx(id);
+    p.glow(240, 150, 90, G.actions.hex(fx.glow), 0.4);
+    p.glow(240, 166, 30, G.actions.hex(fx.hi), 0.25);
+    if (Math.random() < 0.5) G.actions.ember(240 + (Math.random() - 0.5) * 70, 170, fx.spark);
   },
   draw(ctx) {
-    dim(ctx, 0.25);
+    dim(ctx, 0.2);
     const t = G.time;
     const bob = Math.round(Math.sin(t * 1.4) * 2) * 2;
-    text(ctx, "마법사 키우기", 480, 70 + bob, { font: "72px Galmuri11Bold", color: "#ffcf5a", align: "center", outline: "#3a1206" });
-    text(ctx, "세 개의 던전 · 서른 번의 웨이브 · 서른아홉 갈래의 전직", 480, 160, { font: FONT.s, color: COL.muted, align: "center" });
+    text(ctx, "마법사 키우기", 480, 44 + bob, { font: "72px Galmuri11Bold", color: "#ffcf5a", align: "center", outline: "#3a1206" });
+    text(ctx, "세 개의 던전 · 서른 번의 웨이브 · 서른아홉 갈래의 전직", 480, 134, { font: FONT.s, color: COL.muted, align: "center" });
+    // 가운데 마법사 (3차 전직 모습이 번갈아)
+    const id = TITLE_LOOKS[Math.floor(t / 3.2) % TITLE_LOOKS.length];
+    const spr = wizardSprites(jobLook(id)).idle[Math.floor(t * 1.6) % 2];
+    ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillRect(440, 340, 80, 8);
+    drawSprite(ctx, spr, 480 - spr.w * 2.5, 344 - spr.h * 5, 5);
+    text(ctx, JOBS[id].name, 480, 352, { font: FONT.xs, color: COL.faint, align: "center" });
     const items = titleItems();
-    panel(ctx, 330, 400, 300, 196 - 4, { alpha: 0.9 });
-    menuList(ctx, items, 480, 416, 280, { step: 44 });
+    panel(ctx, 330, 386, 300, items.length * 44 + 20, { alpha: 0.92 });
+    menuList(ctx, items, 480, 402, 280, { step: 44 });
     const r = getSave().records;
-    const rec = r.runs ? `최고 웨이브 ${r.bestWave} · 클리어 ${r.victories}회` : "첫 모험을 떠나 보자";
+    const rec = r.runs ? `최고 웨이브 ${r.bestWave} · 클리어 ${r.victories}회 · 불씨 결정 ${getSave().crystals}` : "방향키·WASD 이동 · 공격은 자동";
     text(ctx, rec, 24, 568, { font: FONT.xs, color: COL.faint });
     text(ctx, `v${VERSION}`, 936, 568, { font: FONT.xs, color: COL.faint, align: "right" });
-    text(ctx, "방향키·WASD 이동 · 공격은 자동", 480, 360, { font: FONT.xs, color: COL.faint, align: "center" });
   },
   key(code) {
     const items = titleItems();

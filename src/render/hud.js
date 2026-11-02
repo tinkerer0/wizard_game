@@ -62,9 +62,10 @@ export function drawHud(ctx) {
     }
   }
 
-  // ---- 오른쪽 위: 처치·시간 ----
+  // ---- 오른쪽 위: 처치·시간 (누르면 일시정지 — 터치용) ----
   fade(under(752, 948, 70));
   panel(ctx, 948 - 196, 10, 196, 60, { alpha: 0.92 });
+  if (G.scene === "play" && (s.mode === "playing" || s.mode === "intermission")) hitArea(752, 10, 196, 60, () => G.actions.pause());
   text(ctx, "처치", 948 - 180, 18, { font: FONT.xs, color: COL.muted });
   text(ctx, String(s.kills), 948 - 180, 36, { font: FONT.h });
   text(ctx, "시간", 948 - 20, 18, { font: FONT.xs, color: COL.muted, align: "right" });
@@ -88,12 +89,33 @@ export function drawHud(ctx) {
     text(ctx, "체력 +8   공격력 +2", 480, 112, { font: FONT.xs, color: COL.muted, align: "center", alpha: a });
   }
 
+  // ---- 처음 하는 사람에게 한 줄 도움말 ----
+  if (s.firstRun && s.gw <= 2 && s.mode === "playing") {
+    const tip = s.player.level < 4 ? "방향키·WASD로 피하며 경험치 구슬을 모으세요 — 공격은 자동, 레벨 4에 첫 전직" : "Esc로 일시정지 · 웨이브 10에는 보스가 나온다";
+    panel(ctx, 480 - 330, 548, 660, 36, { alpha: 0.85 });
+    text(ctx, tip, 480, 556, { font: FONT.xs, align: "center", color: COL.text });
+  }
+
   // ---- 큰 안내 문구 ----
   drawBanner(ctx, s);
 
   if (G.bot) {
     panel(ctx, 480 - 70, 552 - (boss ? 90 : 0), 140, 32, { fill: "#163a22", line: "#2a7a44", alpha: 0.9 });
     text(ctx, "자동 플레이", 480, 559 - (boss ? 90 : 0), { font: FONT.xs, align: "center", color: COL.green });
+  }
+  // 스테이지 넘어갈 때 어둡게 닫혔다 열리기
+  let black = 0;
+  if (s.mode === "stageclear" && s.stageClearTimer < 0.6) black = 1 - s.stageClearTimer / 0.6;
+  if (s.fadeIn > 0) { s.fadeIn -= 1 / 60; black = Math.max(black, s.fadeIn / 0.7); }
+  if (black > 0) { ctx.fillStyle = `rgba(4,2,8,${Math.min(1, black)})`; ctx.fillRect(0, 0, 960, 600); }
+  // 터치 조이스틱 표시
+  if (G.touch && G.touch.active) {
+    ctx.save(); ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(G.touch.ox, G.touch.oy, 40, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.arc(G.touch.ox + G.touch.dx * 28, G.touch.oy + G.touch.dy * 28, 14, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   }
   if (s.mode === "jobselect") drawJobSelect(ctx, s);
   if (s.mode === "paused") drawPause(ctx, s);
@@ -181,6 +203,6 @@ function drawPause(ctx, s) {
     const y = 262 + i * 52, sel = i === s.pauseCursor;
     if (sel) { ctx.fillStyle = "#2a1f36"; ctx.fillRect(350, y - 8, 260, 40); flameCursor(ctx, 366, y, G.time); }
     text(ctx, label, 480, y, { font: FONT.m, color: sel ? "#fff2d8" : COL.muted, align: "center" });
-    hitArea(350, y - 8, 260, 40, () => G.actions.pauseSelect(i), () => { s.pauseCursor = i; });
+    if (G.scene === "play") hitArea(350, y - 8, 260, 40, () => G.actions.pauseSelect(i), () => { s.pauseCursor = i; });
   });
 }

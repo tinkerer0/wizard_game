@@ -19,10 +19,11 @@ export function startRun(opts = {}) {
   const s = G.s, p = s.player;
   const ups = opts.upgrades || (G.sim ? {} : getSave().upgrades);
   for (const u of UPGRADES) {
-    const lv = ups[u.id] || 0;
+    const lv = Math.min(u.max, ups[u.id] || 0);
     if (lv > 0) u.apply(p, lv);
   }
   s.startWave = opts.startWave || 1;
+  s.firstRun = !G.sim && getSave().records.runs === 0;
   const preview = opts.previewJob;
   if (preview && JOBS[preview]) {
     // 테스트용: 레벨링 없이 그 직업으로 시작
@@ -110,8 +111,16 @@ export function gainXp(v) {
 
 export function openJobSelect() {
   const s = G.s, p = s.player;
+  if (s.mode === "dead" || s.mode === "jobselect") return;     // 죽은 뒤엔 열지 않고, 이미 열려 있으면 그대로
   s.jobChoices = (p.tier === 0) ? TIER1_CHOICES.slice() : ((JOBS[p.job] && JOBS[p.job].children) || []).slice();
-  if (s.jobChoices.length) { s.mode = "jobselect"; s.jobCursor = 0; s.jobSelectT = 0; emit("jobSelectOpen", {}); }
+  if (s.jobChoices.length) { s.resumeMode = s.mode; s.mode = "jobselect"; s.jobCursor = 0; s.jobSelectT = 0; emit("jobSelectOpen", {}); }
+}
+
+/** 상태 바꾸기: 전직 창이 열려 있으면 닫힌 뒤 돌아갈 상태로 미뤄 둔다 */
+function setMode(m) {
+  const s = G.s;
+  if (s.mode === "jobselect") s.resumeMode = m;
+  else s.mode = m;
 }
 
 export function chooseJob(idx) {
@@ -120,7 +129,8 @@ export function chooseJob(idx) {
   const id = s.jobChoices[clamp(idx, 0, s.jobChoices.length - 1)];
   applyJob(id);
   s.jobChoices = [];
-  s.mode = "playing";
+  s.mode = s.resumeMode && s.resumeMode !== "jobselect" ? s.resumeMode : "playing";
+  s.resumeMode = null;
   emit("jobSelected", { id, x: s.player.x, y: s.player.y, fx: s.player.fx, tier: s.player.tier });
 }
 
@@ -153,6 +163,7 @@ export function updateRun(dt) {
   }
   updateBullets(dt);
   updateEnemies(dt);
+  if (s.mode === "dead") return;          // 이번 프레임에 쓰러졌으면 줍기·레벨업을 하지 않는다
   applyDots(dt);
   updatePickups(dt);
   if (p.castT > 0) p.castT -= dt;
@@ -230,13 +241,13 @@ function openChest(k) {
   emit("chestOpen", { x: k.x, y: k.y, heal });
   const finalStage = !s.endless && s.stageIndex === STAGE_COUNT - 1;
   if (finalStage) {
-    s.mode = "victory";
+    setMode("victory");
     s.victory = true;
     s.victoryTimer = 3.2;
     s.banner = { text: "클리어!", sub: "공허군주를 쓰러뜨렸다", t: 0, max: 3.2, color: "gold" };
     emit("victory", {});
   } else {
-    s.mode = "stageclear";
+    setMode("stageclear");
     s.stageClearTimer = 3.4;
     s.banner = { text: "스테이지 클리어", sub: s.endless ? `무한 모드 웨이브 ${s.gw}` : `다음: ${STAGES[s.stageIndex + 1].name}`, t: 0, max: 3.2, color: "gold" };
     emit("stageClear", { stageIndex: s.stageIndex });

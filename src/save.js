@@ -13,12 +13,31 @@ const DEFAULT = () => ({
 
 let data = null;
 
+const num = (v, lo, hi, def) => (typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : def);
+const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+
+/** 저장 내용을 기본 형식에 맞춰 정리 (손상·조작된 값은 기본값으로) */
+function sanitize(p) {
+  const d = DEFAULT();
+  if (!isObj(p)) return d;
+  d.crystals = Math.floor(num(p.crystals, 0, 1e9, 0));
+  if (isObj(p.upgrades)) for (const [k, v] of Object.entries(p.upgrades)) { const lv = Math.floor(num(v, 0, 10, 0)); if (lv > 0) d.upgrades[k] = lv; }
+  if (Array.isArray(p.seenJobs)) d.seenJobs = [...new Set(p.seenJobs.filter((x) => typeof x === "string"))];
+  if (isObj(p.records)) for (const k of Object.keys(d.records)) d.records[k] = num(p.records[k], 0, 1e9, 0);
+  if (Array.isArray(p.history)) d.history = p.history.filter(isObj).slice(0, 10);
+  if (isObj(p.settings)) {
+    d.settings.sfx = num(p.settings.sfx, 0, 1, d.settings.sfx);
+    d.settings.music = num(p.settings.music, 0, 1, d.settings.music);
+    if (typeof p.settings.shake === "boolean") d.settings.shake = p.settings.shake;
+    if (typeof p.settings.damageNumbers === "boolean") d.settings.damageNumbers = p.settings.damageNumbers;
+  }
+  return d;
+}
+
 export function loadSave() {
   try {
     const raw = localStorage.getItem(KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    const d = DEFAULT();
-    data = parsed ? { ...d, ...parsed, records: { ...d.records, ...(parsed.records || {}) }, settings: { ...d.settings, ...(parsed.settings || {}) } } : d;
+    data = sanitize(raw ? JSON.parse(raw) : null);
   } catch {
     data = DEFAULT();
   }

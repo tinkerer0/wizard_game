@@ -281,7 +281,7 @@ function updateBoss(e, dt) {
   if (e.phase === 1 && e.hp < e.maxHp * 0.5) {
     e.phase = 2; e.invuln = 1.0;
     emit("bossPhase", { boss: e });
-    if (e.id === "voidLord") { e.state = "pattern"; e.pattern = "summonEyes"; e.timer = 0.8; e.step = 0; }
+    if (e.id === "voidLord") { e.state = "pattern"; e.pattern = "summonEyes"; e.timer = 0.8; e.step = 0; e.sub = 0; e.hidden = false; e.alpha = 1; e.tele = null; }
   }
   e.timer -= dt;
   if (e.state === "intro") {
