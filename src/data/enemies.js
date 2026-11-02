@@ -23,7 +23,7 @@ export const ELITE = { hpK: 4.2, rK: 1.35, dmgK: 1.4, xpK: 6 };
 // 보스. hp는 스테이지 끝 무렵 플레이어 화력 기준(봇 시뮬로 맞춤).
 export const BOSSES = {
   boneKing: {
-    name: "해골왕 그림본", title: "지하묘지의 주인", r: 34, hp: 2400, speed: 62, dmg: 18, xp: 120,
+    name: "해골왕 그림본", title: "지하묘지의 주인", r: 34, hp: 2000, speed: 58, dmg: 14, xp: 120,
     patterns: ["charge", "summon", "boneRing"],
   },
   frostWitch: {

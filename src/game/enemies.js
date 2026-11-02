@@ -298,7 +298,7 @@ function updateBoss(e, dt) {
       else if (d > keep + 60) moveToward(e, p.x, p.y, e.speed, dt);
       else { e.x += Math.cos(ang) * e.speed * 0.7 * dt; e.y += Math.sin(ang) * e.speed * 0.7 * dt; }
     } else moveToward(e, p.x, p.y, e.speed * (e.phase === 2 ? 1.25 : 1), dt);
-    if (e.timer <= 0) { e.state = "pattern"; e.pattern = nextPattern(e); e.step = 0; e.sub = 0; e.timer = 0.6; e.patternStart = true; emit("bossCast", { boss: e, pattern: e.pattern }); }
+    if (e.timer <= 0) { e.state = "pattern"; e.pattern = nextPattern(e); e.step = 0; e.sub = 0; e.timer = e.pattern === "charge" ? 0.85 : 0.6; e.patternStart = true; emit("bossCast", { boss: e, pattern: e.pattern }); }
     return;
   }
   // 패턴 진행
@@ -306,17 +306,16 @@ function updateBoss(e, dt) {
   switch (e.pattern) {
     // ----- 해골왕 -----
     case "charge": {
-      const reps = e.phase === 2 ? 4 : 3;
-      if (e.sub === 0) {               // 조준(예고선)
-        if (e.step === 0 && e.timer > 0.55) { e.dashAng = aim; }
-        e.dashAng = e.timer > 0.25 ? aim : e.dashAng;
+      const reps = e.phase === 2 ? 3 : 2;
+      if (e.sub === 0) {               // 조준(예고선): 마지막 0.35초는 방향 고정
+        e.dashAng = e.timer > 0.35 ? aim : e.dashAng;
         e.tele = { kind: "line", ang: e.dashAng, len: 420 };
-        if (e.timer <= 0) { e.sub = 1; e.timer = 0.55; e.tele = null; emit("bossDash", { boss: e, ang: e.dashAng }); }
+        if (e.timer <= 0) { e.sub = 1; e.timer = 0.6; e.tele = null; emit("bossDash", { boss: e, ang: e.dashAng }); }
       } else {
-        e.x += Math.cos(e.dashAng) * 640 * dt; e.y += Math.sin(e.dashAng) * 640 * dt;
+        e.x += Math.cos(e.dashAng) * 560 * dt; e.y += Math.sin(e.dashAng) * 560 * dt;
         if (e.timer <= 0 || e.x <= MIN + e.r || e.x >= MAXX - e.r || e.y <= MIN + e.r || e.y >= MAXY - e.r) {
           if (e.x <= MIN + e.r || e.x >= MAXX - e.r || e.y <= MIN + e.r || e.y >= MAXY - e.r) emit("bossSlam", { x: e.x, y: e.y });
-          e.step++; e.sub = 0; e.timer = 0.75 * fast;
+          e.step++; e.sub = 0; e.timer = 0.9 * fast;
           if (e.step >= reps) endPattern(2.0);
         }
       }

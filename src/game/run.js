@@ -61,6 +61,10 @@ export function startWave(gw) {
     s.spawnQueue = 0;
     s.eliteQueue = 0;
     const id = info.endless ? pick(STAGES).boss : STAGES[info.stageIndex].boss;
+    // 보스 전 정비: 체력 30% 회복
+    const p = s.player, heal = Math.round(p.maxHp * 0.3);
+    p.hp = Math.min(p.maxHp, p.hp + heal);
+    emit("heal", { x: p.x, y: p.y, amount: heal });
     spawnBoss(id);
   } else {
     s.spawnQueue = waveCount(gw);
